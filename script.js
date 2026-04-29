@@ -48,7 +48,6 @@ async function sendToAPI(content, type = 'text', extraData = {}) {
     }
 }
 
-// إرسال رسالة نصية
 async function sendMessage() {
     const input = document.getElementById('userInput');
     const text = input.value.trim();
@@ -59,7 +58,6 @@ async function sendMessage() {
     await sendToAPI(text, 'text');
 }
 
-// محادثة سريعة
 function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
@@ -69,32 +67,20 @@ function sendTextPrompt() {
     }
 }
 
-// رفع صورة وتحليلها
 function handleImageUpload() {
     const input = document.getElementById('imageInput');
     const file = input.files[0];
     if (!file) return;
-    
     addMessage(`🖼️ جاري تحليل الصورة: ${file.name}`, 'user');
-    showLoading();
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const base64 = e.target.result.split(',')[1];
-        sendToAPI('حلل هذه الصورة بالتفصيل', 'analyze_image', { imageData: base64 });
-    };
-    reader.readAsDataURL(file);
+    addMessage('🖼️ *ملاحظة:* رفع الصور قيد التطوير. أرسل الصورة للبوت مباشرة في تيليجرام.', 'bot');
 }
 
-// رفع مستند وتحليله
 function handleDocUpload() {
     const input = document.getElementById('docInput');
     const file = input.files[0];
     if (!file) return;
-    
     addMessage(`📄 جاري تحليل: ${file.name}`, 'user');
     showLoading();
-    
     const reader = new FileReader();
     reader.onload = function(e) {
         const text = e.target.result;
@@ -103,25 +89,20 @@ function handleDocUpload() {
     reader.readAsText(file);
 }
 
-// رفع صوت
 function handleAudioUpload() {
     const input = document.getElementById('audioInput');
     const file = input.files[0];
     if (!file) return;
-    
     addMessage(`🎤 تم استلام: ${file.name}`, 'user');
     addMessage('🎤 *ملاحظة:* تحويل الصوت إلى نص قيد التطوير. أرسل رسالتك الصوتية للبوت مباشرة في تيليجرام.', 'bot');
 }
 
-// تحويل الملفات
 function handleConvertUpload() {
     const input = document.getElementById('convertInput');
     const file = input.files[0];
     if (!file || !conversionFormat) return;
-    
     addMessage(`🔄 جاري تحويل ${file.name} إلى ${conversionFormat.toUpperCase()}`, 'user');
     showLoading();
-    
     const reader = new FileReader();
     reader.onload = function(e) {
         const text = e.target.result;
@@ -130,10 +111,8 @@ function handleConvertUpload() {
     reader.readAsText(file);
 }
 
-// قائمة تحويل الملفات
 function showConversionOptions() {
     const format = prompt('اختر صيغة التحويل:\n\n1. pdf\n2. docx (Word)\n3. xlsx (Excel)\n\nاكتب الرقم أو الاسم:');
-    
     if (format === '1' || format === 'pdf') {
         conversionFormat = 'pdf';
         document.getElementById('convertInput').click();
@@ -145,5 +124,14 @@ function showConversionOptions() {
         document.getElementById('convertInput').click();
     } else if (format) {
         addMessage('❌ صيغة غير مدعومة. اختر: pdf, word, excel', 'bot');
+    }
+}
+
+function showExcelPrompt() {
+    const text = prompt('أدخل البيانات لإنشاء ملف Excel:\n\nمثال: الاسم, العمر, المدينة\nأحمد, 25, القاهرة');
+    if (text) {
+        addMessage(`📊 جاري معالجة البيانات...`, 'user');
+        showLoading();
+        sendToAPI(text, 'create_excel');
     }
 }
