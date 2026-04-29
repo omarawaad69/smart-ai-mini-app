@@ -1,5 +1,4 @@
-const API_URL = 'https://ai-bot-production-2db2.up.railway.app/api/chat';
-const UPLOAD_URL = 'https://ai-bot-production-2db2.up.railway.app/api/upload';
+const API_URL = '/api/chat';
 
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
@@ -53,7 +52,7 @@ async function sendMessage() {
         if (data.status === 'success') {
             addMessage(data.response, 'bot');
         } else {
-            addMessage('❌ حدث خطأ: ' + (data.message || 'غير معروف'), 'bot');
+            addMessage('❌ حدث خطأ', 'bot');
         }
     } catch (error) {
         hideLoading();
@@ -61,61 +60,38 @@ async function sendMessage() {
     }
 }
 
-async function sendTextPrompt() {
+function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
         addMessage(text, 'user');
         showLoading();
         
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: text })
-            });
-            
-            const data = await response.json();
+        fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: text })
+        })
+        .then(response => response.json())
+        .then(data => {
             hideLoading();
-            
             if (data.status === 'success') {
                 addMessage(data.response, 'bot');
             } else {
                 addMessage('❌ حدث خطأ', 'bot');
             }
-        } catch (error) {
+        })
+        .catch(() => {
             hideLoading();
             addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-        }
+        });
     }
 }
 
-async function handleFileUpload() {
+function handleFileUpload() {
     const input = document.getElementById('docInput');
     const file = input.files[0];
     if (!file) return;
     
     addMessage(`📁 جاري رفع: ${file.name}`, 'user');
-    showLoading();
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-        const response = await fetch(UPLOAD_URL, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        hideLoading();
-        
-        if (data.status === 'success') {
-            addMessage(data.response, 'bot');
-        } else {
-            addMessage('❌ حدث خطأ أثناء رفع الملف', 'bot');
-        }
-    } catch (error) {
-        hideLoading();
-        addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-    }
+    addMessage('⚠️ رفع الملفات غير متاح حالياً في هذا الإصدار', 'bot');
 }
