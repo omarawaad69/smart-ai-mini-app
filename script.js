@@ -30,7 +30,7 @@ function hideLoading() {
     if (loading) loading.remove();
 }
 
-function sendMessage() {
+async function sendMessage() {
     const input = document.getElementById('userInput');
     const text = input.value.trim();
     
@@ -40,54 +40,56 @@ function sendMessage() {
     input.value = '';
     showLoading();
     
-    fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: text })
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: text })
+        });
+        
+        const data = await response.json();
         hideLoading();
+        
         if (data.status === 'success') {
             addMessage(data.response, 'bot');
         } else {
-            addMessage('❌ حدث خطأ', 'bot');
+            addMessage('❌ حدث خطأ: ' + (data.message || 'غير معروف'), 'bot');
         }
-    })
-    .catch(() => {
+    } catch (error) {
         hideLoading();
         addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-    });
+    }
 }
 
-function sendTextPrompt() {
+async function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
         addMessage(text, 'user');
         showLoading();
         
-        fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: text })
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: text })
+            });
+            
+            const data = await response.json();
             hideLoading();
+            
             if (data.status === 'success') {
                 addMessage(data.response, 'bot');
             } else {
                 addMessage('❌ حدث خطأ', 'bot');
             }
-        })
-        .catch(() => {
+        } catch (error) {
             hideLoading();
             addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-        });
+        }
     }
 }
 
-function handleFileUpload() {
+async function handleFileUpload() {
     const input = document.getElementById('docInput');
     const file = input.files[0];
     if (!file) return;
@@ -98,21 +100,22 @@ function handleFileUpload() {
     const formData = new FormData();
     formData.append('file', file);
     
-    fetch(UPLOAD_URL, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch(UPLOAD_URL, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
         hideLoading();
+        
         if (data.status === 'success') {
             addMessage(data.response, 'bot');
         } else {
             addMessage('❌ حدث خطأ أثناء رفع الملف', 'bot');
         }
-    })
-    .catch(() => {
+    } catch (error) {
         hideLoading();
         addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-    });
+    }
 }
