@@ -12,13 +12,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { content } = req.body;
-    
-    if (!content) {
-      return res.status(400).json({ status: 'error', message: 'نص فارغ' });
-    }
-
+    const { content, type } = req.body;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    
+    let prompt = content || '';
+    
+    // تخصيص الـ prompt حسب نوع الطلب
+    if (type === 'analyze_image' && req.body.imageData) {
+      prompt = `حلل هذه الصورة: ${content || 'قدم وصفاً تفصيلياً للصورة'}`;
+    } else if (type === 'analyze_document') {
+      prompt = `حلل هذا المستند وقدم ملخصاً لمحتواه:\n\n${content}`;
+    } else if (type === 'convert_file') {
+      const targetFormat = req.body.targetFormat || 'pdf';
+      prompt = `حوّل المحتوى التالي إلى تنسيق ${targetFormat}:\n\n${content}`;
+    } else if (type === 'create_excel') {
+      prompt = `حوّل البيانات التالية إلى تنسيق JSON منظم لملف Excel:\n\n${content}\n\nأعد JSON فقط بالشكل: {"columns": [...], "rows": [[...]]}`;
+    }
     
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}`,
@@ -26,9 +35,9 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: content }] }],
+          contents: [{ parts: [{ text: prompt }] }],
           systemInstruction: {
-            parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ الإجابة مباشرة بدون مقدمات." }]
+            parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ الإجابة مباشرة بدون مقدمات. للقوائم استخدم '- '. للكود استخدم ```." }]
           }
         })
       }
