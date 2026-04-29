@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart AI Bot - المستشار الذكي</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- رأس التطبيق -->
+        <header class="app-header">
+            <h1>🤖 Smart AI Bot</h1>
+            <p>المستشار الذكي متعدد التخصصات</p>
+        </header>
+
+        <!-- منطقة المحادثة -->
+        <div class="chat-area" id="chatArea">
+            <div class="message bot-message">
+                <div class="message-content">
+                    🎉 أهلاً بك! أنا مستشار الذكاء الاصطناعي الخارق.
+                    <br><br>
+                    أرسل سؤالك أو ملفك وسأجيبك فوراً.
+                </div>
+            </div>
+        </div>
+
+        <!-- أزرار الميزات -->
+        <div class="features-grid">
+            <button class="feature-btn" onclick="sendTextPrompt()">
+                <span class="icon">💬</span>
+                <span>محادثة</span>
+            </button>
+            <button class="feature-btn" onclick="document.getElementById('imageInput').click()">
+                <span class="icon">🖼️</span>
+                <span>تحليل صورة</span>
+            </button>
+            <button class="feature-btn" onclick="document.getElementById('docInput').click()">
+                <span class="icon">📄</span>
+                <span>تحليل مستند</span>
+            </button>
+            <button class="feature-btn" onclick="document.getElementById('audioInput').click()">
+                <span class="icon">🎤</span>
+                <span>صوت</span>
+            </button>
+        </div>
+
+        <!-- مدخلات مخفية للملفات -->
+        <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleFileUpload('image')">
+        <input type="file" id="docInput" accept=".pdf,.docx,.xlsx,.pptx,.txt" style="display:none" onchange="handleFileUpload('doc')">
+        <input type="file" id="audioInput" accept="audio/*" style="display:none" onchange="handleFileUpload('audio')">
+
+        <!-- منطقة الإدخال -->
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">📤</button>
+        </div>
+
+        <!-- تذييل -->
+        <footer class="app-footer">
+            <p>👨‍💻 المبرمج: Omar Abd El Gawaad</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@telegram-apps/sdk@latest/dist/telegram-apps.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
