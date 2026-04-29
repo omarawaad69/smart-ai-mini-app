@@ -1,5 +1,5 @@
-const API_URL = 'https://اسم-مشروعك-على-railway.up.railway.app/api/chat';
-const UPLOAD_URL = 'https://اسم-مشروعك-على-railway.up.railway.app/api/upload';
+const API_URL = 'https://ai-bot-production-2db2.up.railway.app/api/chat';
+const UPLOAD_URL = 'https://ai-bot-production-2db2.up.railway.app/api/upload';
 
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
