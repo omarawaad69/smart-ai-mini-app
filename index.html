@@ -18,24 +18,46 @@
                 <div class="message-content">
                     🎉 أهلاً بك! أنا مستشار الذكاء الاصطناعي الخارق.
                     <br><br>
-                    أرسل سؤالك أو ملفك وسأجيبك فوراً.
+                    أرسل سؤالك، ملفك، أو رسالة صوتية وسأجيبك فوراً.
                 </div>
             </div>
         </div>
 
+        <!-- شبكة الأزرار الكاملة -->
         <div class="features-grid">
             <button class="feature-btn" onclick="sendTextPrompt()">
                 <span class="icon">💬</span>
                 <span>محادثة</span>
             </button>
+            <button class="feature-btn" onclick="document.getElementById('imageInput').click()">
+                <span class="icon">🖼️</span>
+                <span>تحليل صورة</span>
+            </button>
             <button class="feature-btn" onclick="document.getElementById('docInput').click()">
                 <span class="icon">📄</span>
                 <span>رفع ملف</span>
             </button>
+            <button class="feature-btn" onclick="document.getElementById('audioInput').click()">
+                <span class="icon">🎤</span>
+                <span>رسالة صوتية</span>
+            </button>
+            <button class="feature-btn" onclick="document.getElementById('convertInput').click()">
+                <span class="icon">🔄</span>
+                <span>تحويل ملفات</span>
+            </button>
+            <button class="feature-btn" onclick="showConversionOptions()">
+                <span class="icon">📊</span>
+                <span>إنشاء Excel</span>
+            </button>
         </div>
 
-        <input type="file" id="docInput" style="display:none" onchange="handleFileUpload()">
+        <!-- مدخلات مخفية -->
+        <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload()">
+        <input type="file" id="docInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleDocUpload()">
+        <input type="file" id="audioInput" accept="audio/*" style="display:none" onchange="handleAudioUpload()">
+        <input type="file" id="convertInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleConvertUpload()">
 
+        <!-- منطقة الإدخال -->
         <div class="input-area">
             <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button onclick="sendMessage()">📤</button>
@@ -46,7 +68,6 @@
         </footer>
     </div>
 
-    <!-- Version 2.0 - Updated CORS Support -->
     <script src="script.js"></script>
 </body>
 </html>
