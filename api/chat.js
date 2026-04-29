@@ -17,7 +17,6 @@ export default async function handler(req, res) {
     
     let prompt = content || '';
     
-    // تخصيص الـ prompt حسب نوع الطلب
     if (type === 'analyze_image' && req.body.imageData) {
       prompt = `حلل هذه الصورة: ${content || 'قدم وصفاً تفصيلياً للصورة'}`;
     } else if (type === 'analyze_document') {
