@@ -1,56 +1,6 @@
-// تهيئة Telegram Mini App SDK
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+const API_URL = 'https://اسم-مشروعك-على-railway.up.railway.app/api/chat';
+const UPLOAD_URL = 'https://اسم-مشروعك-على-railway.up.railway.app/api/upload';
 
-// إرسال رسالة نصية
-function sendMessage() {
-    const input = document.getElementById('userInput');
-    const text = input.value.trim();
-    
-    if (!text) return;
-    
-    addMessage(text, 'user');
-    input.value = '';
-    
-    // إرسال إلى البوت عبر Telegram WebApp
-    tg.sendData(JSON.stringify({
-        type: 'text',
-        content: text
-    }));
-}
-
-// رفع الملفات
-function handleFileUpload(type) {
-    const input = document.getElementById(
-        type === 'image' ? 'imageInput' : 
-        type === 'doc' ? 'docInput' : 'audioInput'
-    );
-    
-    const file = input.files[0];
-    if (!file) return;
-    
-    addMessage(`📁 جاري رفع: ${file.name}`, 'user');
-    
-    // إرسال الملف إلى البوت
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-    
-    fetch('/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        addMessage('✅ تم رفع الملف بنجاح!', 'bot');
-    })
-    .catch(error => {
-        addMessage('❌ حدث خطأ أثناء رفع الملف', 'bot');
-    });
-}
-
-// إضافة رسالة للشاشة
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
     const messageDiv = document.createElement('div');
@@ -65,14 +15,104 @@ function addMessage(text, sender) {
     chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-// إرسال نص عادي
+function showLoading() {
+    const chatArea = document.getElementById('chatArea');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'message bot-message';
+    loadingDiv.id = 'loadingMessage';
+    loadingDiv.innerHTML = '<div class="message-content"><div class="loading"></div></div>';
+    chatArea.appendChild(loadingDiv);
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function hideLoading() {
+    const loading = document.getElementById('loadingMessage');
+    if (loading) loading.remove();
+}
+
+function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    addMessage(text, 'user');
+    input.value = '';
+    showLoading();
+    
+    fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.status === 'success') {
+            addMessage(data.response, 'bot');
+        } else {
+            addMessage('❌ حدث خطأ', 'bot');
+        }
+    })
+    .catch(() => {
+        hideLoading();
+        addMessage('❌ تعذر الاتصال بالخادم', 'bot');
+    });
+}
+
 function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
         addMessage(text, 'user');
-        tg.sendData(JSON.stringify({
-            type: 'text',
-            content: text
-        }));
+        showLoading();
+        
+        fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: text })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.status === 'success') {
+                addMessage(data.response, 'bot');
+            } else {
+                addMessage('❌ حدث خطأ', 'bot');
+            }
+        })
+        .catch(() => {
+            hideLoading();
+            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
+        });
     }
+}
+
+function handleFileUpload() {
+    const input = document.getElementById('docInput');
+    const file = input.files[0];
+    if (!file) return;
+    
+    addMessage(`📁 جاري رفع: ${file.name}`, 'user');
+    showLoading();
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    fetch(UPLOAD_URL, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.status === 'success') {
+            addMessage(data.response, 'bot');
+        } else {
+            addMessage('❌ حدث خطأ أثناء رفع الملف', 'bot');
+        }
+    })
+    .catch(() => {
+        hideLoading();
+        addMessage('❌ تعذر الاتصال بالخادم', 'bot');
+    });
 }
