@@ -5,9 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart AI Bot</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
-    <!-- Version 3.1 - Fixed All Buttons -->
+
+    <!-- شاشة البداية -->
+    <div id="splashScreen" style="
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(135deg, #1a1a2e, #0f3460);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 9999; transition: opacity 0.5s;
+    ">
+        <div style="font-size: 5em; animation: pulse 1.5s infinite;">🤖</div>
+        <h1 style="color: #fff; margin-top: 20px; font-size: 1.8em;">Smart AI Bot</h1>
+        <p style="color: #888; margin-top: 10px;">المستشار الذكي متعدد التخصصات</p>
+        <div class="loading" style="margin-top: 30px;"></div>
+    </div>
+
+    <!-- القائمة الجانبية -->
+    <div id="sidebar" style="
+        position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
+        background: #16213e; z-index: 1000; transition: right 0.3s;
+        padding: 20px; box-shadow: -5px 0 15px rgba(0,0,0,0.5); overflow-y: auto;
+    ">
+        <button onclick="closeSidebar()" style="
+            background: none; border: none; color: #fff; font-size: 1.5em;
+            cursor: pointer; margin-bottom: 20px;
+        ">✕</button>
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="font-size: 3em;">🤖</div>
+            <h3 style="color: #fff;">Smart AI Bot</h3>
+            <p style="color: #888; font-size: 0.8em;">المستشار الذكي</p>
+        </div>
+        
+        <button onclick="navigateTo('chat')" style="
+            display: block; width: 100%; padding: 15px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.1); border: none; border-radius: 10px;
+            color: #fff; font-size: 1em; cursor: pointer; text-align: right;
+        ">💬 المحادثة</button>
+        
+        <button onclick="navigateTo('image')" style="
+            display: block; width: 100%; padding: 15px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.1); border: none; border-radius: 10px;
+            color: #fff; font-size: 1em; cursor: pointer; text-align: right;
+        ">🖼️ تحليل صورة</button>
+        
+        <button onclick="navigateTo('document')" style="
+            display: block; width: 100%; padding: 15px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.1); border: none; border-radius: 10px;
+            color: #fff; font-size: 1em; cursor: pointer; text-align: right;
+        ">📄 تحليل مستند</button>
+        
+        <button onclick="navigateTo('convert')" style="
+            display: block; width: 100%; padding: 15px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.1); border: none; border-radius: 10px;
+            color: #fff; font-size: 1em; cursor: pointer; text-align: right;
+        ">🔄 تحويل ملفات</button>
+        
+        <button onclick="navigateTo('excel')" style="
+            display: block; width: 100%; padding: 15px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.1); border: none; border-radius: 10px;
+            color: #fff; font-size: 1em; cursor: pointer; text-align: right;
+        ">📊 إنشاء Excel</button>
+        
+        <button onclick="openBot()" style="
+            display: block; width: 100%; padding: 15px; margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+            border: none; border-radius: 10px; color: #fff; font-size: 1em;
+            cursor: pointer; text-align: right;
+        ">🤖 فتح البوت في تيليجرام</button>
+    </div>
+
+    <!-- زر القائمة -->
+    <button id="menuBtn" onclick="toggleSidebar()" style="
+        position: fixed; top: 15px; right: 15px; z-index: 999;
+        background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
+        width: 40px; height: 40px; color: #fff; font-size: 1.2em;
+        cursor: pointer;
+    ">☰</button>
+
+    <!-- التطبيق الرئيسي -->
     <div class="app-container">
         <header class="app-header">
             <h1>🤖 Smart AI Bot</h1>
@@ -19,7 +103,7 @@
                 <div class="message-content">
                     🎉 أهلاً بك! أنا مستشار الذكاء الاصطناعي الخارق.
                     <br><br>
-                    أرسل سؤالك، ملفك، أو رسالة صوتية وسأجيبك فوراً.
+                    أرسل سؤالك أو ملفك وسأجيبك فوراً.
                 </div>
             </div>
         </div>
@@ -39,9 +123,9 @@
             </button>
             <button class="feature-btn" onclick="document.getElementById('audioInput').click()">
                 <span class="icon">🎤</span>
-                <span>رسالة صوتية</span>
+                <span>صوت</span>
             </button>
-            <button class="feature-btn" onclick="showConversionOptions()">
+            <button class="feature-btn" onclick="openBotForConversion()">
                 <span class="icon">🔄</span>
                 <span>تحويل ملفات</span>
             </button>
@@ -54,17 +138,47 @@
         <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload()">
         <input type="file" id="docInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleDocUpload()">
         <input type="file" id="audioInput" accept="audio/*" style="display:none" onchange="handleAudioUpload()">
-        <input type="file" id="convertInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleConvertUpload()">
 
         <div class="input-area">
             <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button onclick="sendMessage()">📤</button>
         </div>
 
+        <!-- شريط التنقل السفلي -->
+        <div class="bottom-nav">
+            <button onclick="sendTextPrompt()" class="nav-item">
+                <span>💬</span>
+                <span>محادثة</span>
+            </button>
+            <button onclick="document.getElementById('imageInput').click()" class="nav-item">
+                <span>🖼️</span>
+                <span>صورة</span>
+            </button>
+            <button onclick="document.getElementById('docInput').click()" class="nav-item">
+                <span>📄</span>
+                <span>ملف</span>
+            </button>
+            <button onclick="openBot()" class="nav-item">
+                <span>🤖</span>
+                <span>البوت</span>
+            </button>
+        </div>
+
         <footer class="app-footer">
             <p>👨‍💻 المبرمج: Omar Abd El Gawaad</p>
         </footer>
     </div>
+
+    <script>
+        // إخفاء شاشة البداية بعد 2.5 ثانية
+        setTimeout(() => {
+            const splash = document.getElementById('splashScreen');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 500);
+            }
+        }, 2500);
+    </script>
 
     <script src="script.js"></script>
 </body>
