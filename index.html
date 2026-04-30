@@ -139,11 +139,6 @@
         <input type="file" id="docInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleDocUpload()">
         <input type="file" id="audioInput" accept="audio/*" style="display:none" onchange="handleAudioUpload()">
 
-        <div class="input-area">
-            <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button onclick="sendMessage()">📤</button>
-        </div>
-
         <!-- شريط التنقل السفلي -->
         <div class="bottom-nav">
             <button onclick="sendTextPrompt()" class="nav-item">
@@ -170,7 +165,6 @@
     </div>
 
     <script>
-        // إخفاء شاشة البداية بعد 2.5 ثانية
         setTimeout(() => {
             const splash = document.getElementById('splashScreen');
             if (splash) {
