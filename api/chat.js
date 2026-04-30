@@ -3,50 +3,32 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { content, type, imageData } = req.body;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     
-    let prompt = content || '';
-    let requestBody = {
-      contents: [{ parts: [{ text: prompt }] }],
-      systemInstruction: {
-        parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ الإجابة مباشرة بدون مقدمات. للقوائم استخدم '- '. للكود استخدم ```." }]
-      }
-    };
+    if (!GEMINI_API_KEY) {
+      return res.status(500).json({ status: 'error', message: 'مفتاح API غير موجود' });
+    }
     
-    // إضافة الصورة إذا وجدت
+    let parts = [{ text: content || 'مرحباً' }];
+    
     if (type === 'analyze_image' && imageData) {
-      requestBody.contents[0].parts = [
-        { text: prompt || 'حلل هذه الصورة بالتفصيل' },
-        {
-          inline_data: {
-            mime_type: 'image/jpeg',
-            data: imageData
-          }
-        }
+      parts = [
+        { text: 'حلل هذه الصورة بالتفصيل. صف ما تراه.' },
+        { inline_data: { mime_type: 'image/jpeg', data: imageData } }
       ];
     }
     
-    if (type === 'analyze_document') {
-      prompt = `حلل هذا المستند وقدم ملخصاً لمحتواه:\n\n${content}`;
-      requestBody.contents[0].parts[0].text = prompt;
-    } else if (type === 'convert_file') {
-      const targetFormat = req.body.targetFormat || 'pdf';
-      prompt = `حوّل المحتوى التالي إلى تنسيق ${targetFormat}:\n\n${content}`;
-      requestBody.contents[0].parts[0].text = prompt;
-    } else if (type === 'create_excel') {
-      prompt = `حوّل البيانات التالية إلى تنسيق JSON منظم لملف Excel:\n\n${content}\n\nأعد JSON فقط بالشكل: {"columns": [...], "rows": [[...]]}`;
-      requestBody.contents[0].parts[0].text = prompt;
-    }
+    const requestBody = {
+      contents: [{ parts }],
+      systemInstruction: {
+        parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ مباشرة بدون مقدمات." }]
+      }
+    };
     
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}`,
@@ -58,17 +40,15 @@ export default async function handler(req, res) {
     );
 
     const data = await response.json();
+    
+    if (data.error) {
+      return res.status(500).json({ status: 'error', message: data.error.message });
+    }
+    
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'عذراً، لم أتمكن من الإجابة.';
 
-    return res.status(200).json({
-      status: 'success',
-      response: reply
-    });
-
+    return res.status(200).json({ status: 'success', response: reply });
   } catch (error) {
-    return res.status(500).json({
-      status: 'error',
-      message: 'حدث خطأ في الخادم'
-    });
+    return res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم' });
   }
 }
