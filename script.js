@@ -66,7 +66,7 @@ function handleImageUpload() {
     const file = document.getElementById('imageInput').files[0];
     if (!file) return;
     addMessage(`🖼️ تم استلام: ${file.name}`, 'user');
-    addMessage('🖼️ *ملاحظة:* تحليل الصور يعمل بشكل كامل في بوت تيليجرام.', 'bot');
+    addMessage('🖼️ تحليل الصور يعمل بشكل كامل في بوت تيليجرام.', 'bot');
     document.getElementById('imageInput').value = '';
 }
 
@@ -84,24 +84,6 @@ function handleDocUpload() {
     document.getElementById('docInput').value = '';
 }
 
-function handleAudioUpload() {
-    const file = document.getElementById('audioInput').files[0];
-    if (!file) return;
-    addMessage(`🎤 تم استلام: ${file.name}`, 'user');
-    addMessage('🎤 أرسل الصوت للبوت في تيليجرام لتحويله إلى نص.', 'bot');
-    document.getElementById('audioInput').value = '';
-}
-
-function showExcelPrompt() {
-    const text = prompt('أدخل البيانات لإنشاء ملف Excel:\n\nمثال: الاسم, العمر, المدينة\nأحمد, 25, القاهرة');
-    if (text) {
-        addMessage('📊 جاري معالجة البيانات...', 'user');
-        showLoading();
-        sendToAPI('حوّل البيانات التالية إلى تنسيق JSON لملف Excel:\n\n' + text);
-    }
-}
-
-function openBotForConversion() {
-    addMessage('🤖 *لتحويل الملفات:* سيفتح البوت في تيليجرام. أرسل الملف مع تعليق: *حول لـ pdf*', 'bot');
-    setTimeout(() => window.open('https://t.me/SmartAiLegalBot', '_blank'), 1000);
+function openBot() {
+    window.open('https://t.me/SmartAiLegalBot', '_blank');
 }
