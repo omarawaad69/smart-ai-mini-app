@@ -135,6 +135,7 @@ function handleDocUpload() {
 function openBot() {
     addMessage('🤖 *للتحدث مع البوت:*', 'bot');
     addMessage('1. افتح تطبيق تيليجرام', 'bot');
-    addMessage('2. ابحث عن: @SmartAiLegalBot', 'bot');
+    // استخدام حرف LTR invisible لجعل @ تظهر بشكل صحيح
+    addMessage('2. ابحث عن: \u200E@SmartAiLegalBot', 'bot');
     addMessage('3. أرسل /start للبدء', 'bot');
 }
