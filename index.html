@@ -37,27 +37,18 @@
                 <span class="icon">📄</span>
                 <span>رفع ملف</span>
             </button>
-            <button class="feature-btn" onclick="document.getElementById('audioInput').click()">
-                <span class="icon">🎤</span>
-                <span>صوت</span>
-            </button>
-            <button class="feature-btn" onclick="openBotForConversion()">
-                <span class="icon">🔄</span>
-                <span>تحويل ملفات</span>
-            </button>
-            <button class="feature-btn" onclick="showExcelPrompt()">
-                <span class="icon">📊</span>
-                <span>إنشاء Excel</span>
+            <button class="feature-btn" onclick="openBot()">
+                <span class="icon">🤖</span>
+                <span>فتح البوت</span>
             </button>
         </div>
 
         <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload()">
         <input type="file" id="docInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleDocUpload()">
-        <input type="file" id="audioInput" accept="audio/*" style="display:none" onchange="handleAudioUpload()">
 
         <div class="input-area">
             <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button onclick="sendMessage()">📤</button>
+            <button class="send-btn" onclick="sendMessage()">➤</button>
         </div>
 
         <footer class="app-footer">
