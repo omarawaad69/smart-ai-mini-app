@@ -1,5 +1,4 @@
 const API_URL = '/api/chat';
-let conversionFormat = null;
 
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
@@ -48,6 +47,8 @@ async function sendToAPI(content, type = 'text', extraData = {}) {
     }
 }
 
+// ==================== المحادثة النصية ====================
+
 async function sendMessage() {
     const input = document.getElementById('userInput');
     const text = input.value.trim();
@@ -67,13 +68,18 @@ function sendTextPrompt() {
     }
 }
 
+// ==================== تحليل الصور ====================
+
 function handleImageUpload() {
     const input = document.getElementById('imageInput');
     const file = input.files[0];
     if (!file) return;
     addMessage(`🖼️ جاري تحليل الصورة: ${file.name}`, 'user');
-    addMessage('🖼️ *ملاحظة:* رفع الصور قيد التطوير. أرسل الصورة للبوت مباشرة في تيليجرام.', 'bot');
+    addMessage('🖼️ *ملاحظة:* تحليل الصور يعمل بشكل كامل في بوت تيليجرام. في التطبيق المصغر، يتم إرسال اسم الملف فقط.', 'bot');
+    input.value = '';
 }
+
+// ==================== تحليل المستندات ====================
 
 function handleDocUpload() {
     const input = document.getElementById('docInput');
@@ -81,57 +87,107 @@ function handleDocUpload() {
     if (!file) return;
     addMessage(`📄 جاري تحليل: ${file.name}`, 'user');
     showLoading();
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        sendToAPI(text.substring(0, 5000), 'analyze_document');
-    };
-    reader.readAsText(file);
+    
+    // للملفات النصية
+    if (file.name.endsWith('.txt') || file.name.endsWith('.csv')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            sendToAPI(text.substring(0, 5000), 'analyze_document');
+        };
+        reader.readAsText(file);
+    } else {
+        // للملفات الأخرى
+        hideLoading();
+        addMessage('📄 *ملاحظة:* تحليل ملفات PDF و Word و Excel يعمل بشكل كامل في بوت تيليجرام. أرسل الملف للبوت مباشرة.', 'bot');
+    }
+    input.value = '';
 }
+
+// ==================== الصوت ====================
 
 function handleAudioUpload() {
     const input = document.getElementById('audioInput');
     const file = input.files[0];
     if (!file) return;
     addMessage(`🎤 تم استلام: ${file.name}`, 'user');
-    addMessage('🎤 *ملاحظة:* تحويل الصوت إلى نص قيد التطوير. أرسل رسالتك الصوتية للبوت مباشرة في تيليجرام.', 'bot');
+    addMessage('🎤 *للحصول على أفضل تجربة:* أرسل رسالتك الصوتية مباشرة إلى بوت تيليجرام. سيقوم بتحويلها إلى نص والرد عليك فوراً.', 'bot');
+    input.value = '';
+}
+
+// ==================== تحويل الملفات ====================
+
+function showConversionOptions() {
+    // عرض أزرار التحويل مباشرة في المحادثة
+    addMessage('🔄 *اختر نوع التحويل:*', 'bot');
+    addMessage('📄 1. Word → PDF\n📄 2. PDF → Word\n📊 3. Excel → PDF\n📊 4. PDF → Excel\n📊 5. Excel → Word\n📄 6. Word → Excel', 'bot');
+    addMessage('✏️ *اكتب رقم الخيار في مربع الإدخال أدناه ثم أرسل الملف*', 'bot');
+    
+    // إعداد المستمع للاختيار
+    window.waitingForConversion = true;
 }
 
 function handleConvertUpload() {
     const input = document.getElementById('convertInput');
     const file = input.files[0];
-    if (!file || !conversionFormat) return;
-    addMessage(`🔄 جاري تحويل ${file.name} إلى ${conversionFormat.toUpperCase()}`, 'user');
-    showLoading();
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        sendToAPI(text.substring(0, 5000), 'convert_file', { targetFormat: conversionFormat });
+    if (!file) return;
+    
+    const formatMap = {
+        '1': 'pdf', 'pdf': 'pdf',
+        '2': 'docx', 'word': 'docx', 'docx': 'docx',
+        '3': 'pdf', '4': 'xlsx', 'excel': 'xlsx', 'xlsx': 'xlsx',
+        '5': 'docx', '6': 'xlsx'
     };
-    reader.readAsText(file);
+    
+    const format = window.lastConversionChoice || 'pdf';
+    const targetFormat = formatMap[format] || 'pdf';
+    
+    addMessage(`🔄 جاري تحويل ${file.name} إلى ${targetFormat.toUpperCase()}`, 'user');
+    addMessage('🔄 *ملاحظة:* تحويل الملفات يعمل بشكل كامل في بوت تيليجرام. أرسل الملف للبوت مباشرة مع تعليق: *حول لـ ' + targetFormat + '*', 'bot');
+    input.value = '';
 }
 
-function showConversionOptions() {
-    const format = prompt('اختر صيغة التحويل:\n\n1. pdf\n2. docx (Word)\n3. xlsx (Excel)\n\nاكتب الرقم أو الاسم:');
-    if (format === '1' || format === 'pdf') {
-        conversionFormat = 'pdf';
-        document.getElementById('convertInput').click();
-    } else if (format === '2' || format === 'docx' || format === 'word') {
-        conversionFormat = 'docx';
-        document.getElementById('convertInput').click();
-    } else if (format === '3' || format === 'xlsx' || format === 'excel' || format === 'اكسيل') {
-        conversionFormat = 'xlsx';
-        document.getElementById('convertInput').click();
-    } else if (format) {
-        addMessage('❌ صيغة غير مدعومة. اختر: pdf, word, excel', 'bot');
-    }
-}
+// ==================== إنشاء Excel ====================
 
 function showExcelPrompt() {
-    const text = prompt('أدخل البيانات لإنشاء ملف Excel:\n\nمثال: الاسم, العمر, المدينة\nأحمد, 25, القاهرة');
+    const text = prompt('أدخل البيانات لإنشاء ملف Excel:\n\nمثال: الاسم, العمر, المدينة\nأحمد, 25, القاهرة\nمحمد, 30, الإسكندرية');
     if (text) {
         addMessage(`📊 جاري معالجة البيانات...`, 'user');
         showLoading();
         sendToAPI(text, 'create_excel');
     }
 }
+
+// ==================== مستمع للاختيارات ====================
+
+// تعديل دالة sendMessage للتعامل مع اختيارات التحويل
+const originalSendMessage = sendMessage;
+sendMessage = async function() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    
+    if (window.waitingForConversion && text) {
+        const formatMap = {
+            '1': 'pdf', 'pdf': 'pdf',
+            '2': 'docx', 'word': 'docx', 'docx': 'docx',
+            '3': 'pdf', '4': 'xlsx', 'excel': 'xlsx', 'xlsx': 'xlsx',
+            '5': 'docx', '6': 'xlsx'
+        };
+        
+        const targetFormat = formatMap[text.toLowerCase()] || text.toLowerCase();
+        window.lastConversionChoice = text;
+        window.waitingForConversion = false;
+        
+        addMessage(`✅ تم اختيار: ${targetFormat.toUpperCase()}`, 'user');
+        addMessage(`📁 الآن أرسل الملف الذي تريد تحويله`, 'bot');
+        input.value = '';
+        
+        // فتح نافذة رفع الملف بعد ثانية
+        setTimeout(() => {
+            document.getElementById('convertInput').click();
+        }, 1000);
+        return;
+    }
+    
+    await originalSendMessage();
+};
