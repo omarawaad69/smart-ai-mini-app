@@ -12,7 +12,17 @@ function addMessage(text, sender) {
     chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-function showLoading() {
+async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    // إظهار رسالة المستخدم
+    addMessage(text, 'user');
+    input.value = '';
+    
+    // إظهار تحميل
     const chatArea = document.getElementById('chatArea');
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'message bot-message';
@@ -20,45 +30,63 @@ function showLoading() {
     loadingDiv.innerHTML = '<div class="message-content">⏳ جاري المعالجة...</div>';
     chatArea.appendChild(loadingDiv);
     chatArea.scrollTop = chatArea.scrollHeight;
-}
-
-function hideLoading() {
-    const loading = document.getElementById('loadingMessage');
-    if (loading) loading.remove();
-}
-
-async function sendToAPI(text) {
+    
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content: text })
         });
+        
         const data = await response.json();
-        hideLoading();
-        addMessage(data.response || 'تم الاستلام', 'bot');
+        
+        // إزالة التحميل
+        const loading = document.getElementById('loadingMessage');
+        if (loading) loading.remove();
+        
+        // إظهار الرد
+        if (data.response) {
+            addMessage(data.response, 'bot');
+        } else {
+            addMessage('عذراً، لم أتمكن من معالجة طلبك.', 'bot');
+        }
+        
     } catch (error) {
-        hideLoading();
+        const loading = document.getElementById('loadingMessage');
+        if (loading) loading.remove();
         addMessage('❌ تعذر الاتصال بالخادم', 'bot');
     }
-}
-
-async function sendMessage() {
-    const input = document.getElementById('userInput');
-    const text = input.value.trim();
-    if (!text) return;
-    addMessage(text, 'user');
-    input.value = '';
-    showLoading();
-    await sendToAPI(text);
 }
 
 function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
         addMessage(text, 'user');
-        showLoading();
-        sendToAPI(text);
+        
+        const chatArea = document.getElementById('chatArea');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message bot-message';
+        loadingDiv.id = 'loadingMessage';
+        loadingDiv.innerHTML = '<div class="message-content">⏳ جاري المعالجة...</div>';
+        chatArea.appendChild(loadingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+        
+        fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: text })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const loading = document.getElementById('loadingMessage');
+            if (loading) loading.remove();
+            addMessage(data.response || 'عذراً، لم أتمكن من معالجة طلبك.', 'bot');
+        })
+        .catch(() => {
+            const loading = document.getElementById('loadingMessage');
+            if (loading) loading.remove();
+            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
+        });
     }
 }
 
@@ -73,12 +101,36 @@ function handleImageUpload() {
 function handleDocUpload() {
     const file = document.getElementById('docInput').files[0];
     if (!file) return;
-    addMessage(`📄 جاري تحليل: ${file.name}`, 'user');
-    showLoading();
+    addMessage(`📄 جاري قراءة: ${file.name}`, 'user');
+    
     const reader = new FileReader();
     reader.onload = function(e) {
-        const text = 'حلل هذا المستند وقدم ملخصاً لمحتواه:\n\n' + e.target.result.substring(0, 5000);
-        sendToAPI(text);
+        const text = e.target.result.substring(0, 5000);
+        
+        const chatArea = document.getElementById('chatArea');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message bot-message';
+        loadingDiv.id = 'loadingMessage';
+        loadingDiv.innerHTML = '<div class="message-content">⏳ جاري التحليل...</div>';
+        chatArea.appendChild(loadingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+        
+        fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: 'حلل هذا المستند:\n\n' + text })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const loading = document.getElementById('loadingMessage');
+            if (loading) loading.remove();
+            addMessage(data.response || 'عذراً، لم أتمكن من تحليل المستند.', 'bot');
+        })
+        .catch(() => {
+            const loading = document.getElementById('loadingMessage');
+            if (loading) loading.remove();
+            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
+        });
     };
     reader.readAsText(file);
     document.getElementById('docInput').value = '';
