@@ -12,20 +12,40 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { content, type } = req.body;
+    const { content, type, imageData } = req.body;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     
     let prompt = content || '';
+    let requestBody = {
+      contents: [{ parts: [{ text: prompt }] }],
+      systemInstruction: {
+        parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ الإجابة مباشرة بدون مقدمات. للقوائم استخدم '- '. للكود استخدم ```." }]
+      }
+    };
     
-    if (type === 'analyze_image' && req.body.imageData) {
-      prompt = `حلل هذه الصورة: ${content || 'قدم وصفاً تفصيلياً للصورة'}`;
-    } else if (type === 'analyze_document') {
+    // إضافة الصورة إذا وجدت
+    if (type === 'analyze_image' && imageData) {
+      requestBody.contents[0].parts = [
+        { text: prompt || 'حلل هذه الصورة بالتفصيل' },
+        {
+          inline_data: {
+            mime_type: 'image/jpeg',
+            data: imageData
+          }
+        }
+      ];
+    }
+    
+    if (type === 'analyze_document') {
       prompt = `حلل هذا المستند وقدم ملخصاً لمحتواه:\n\n${content}`;
+      requestBody.contents[0].parts[0].text = prompt;
     } else if (type === 'convert_file') {
       const targetFormat = req.body.targetFormat || 'pdf';
       prompt = `حوّل المحتوى التالي إلى تنسيق ${targetFormat}:\n\n${content}`;
+      requestBody.contents[0].parts[0].text = prompt;
     } else if (type === 'create_excel') {
       prompt = `حوّل البيانات التالية إلى تنسيق JSON منظم لملف Excel:\n\n${content}\n\nأعد JSON فقط بالشكل: {"columns": [...], "rows": [[...]]}`;
+      requestBody.contents[0].parts[0].text = prompt;
     }
     
     const response = await fetch(
@@ -33,12 +53,7 @@ export default async function handler(req, res) {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          systemInstruction: {
-            parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ الإجابة مباشرة بدون مقدمات. للقوائم استخدم '- '. للكود استخدم ```." }]
-          }
-        })
+        body: JSON.stringify(requestBody)
       }
     );
 
