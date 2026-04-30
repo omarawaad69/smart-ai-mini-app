@@ -1,4 +1,5 @@
 const API_URL = '/api/chat';
+const USER_ID = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
@@ -32,7 +33,10 @@ async function sendMessage() {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-User-Id': USER_ID
+            },
             body: JSON.stringify({ content: text })
         });
         
@@ -69,7 +73,10 @@ function sendTextPrompt() {
         
         fetch(API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-User-Id': USER_ID
+            },
             body: JSON.stringify({ content: text })
         })
         .then(response => response.json())
@@ -113,7 +120,10 @@ function handleDocUpload() {
         
         fetch(API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-User-Id': USER_ID
+            },
             body: JSON.stringify({ content: 'حلل هذا المستند:\n\n' + text })
         })
         .then(response => response.json())
@@ -135,7 +145,6 @@ function handleDocUpload() {
 function openBot() {
     addMessage('🤖 *للتحدث مع البوت:*', 'bot');
     addMessage('1. افتح تطبيق تيليجرام', 'bot');
-    // استخدام حرف LTR invisible لجعل @ تظهر بشكل صحيح
     addMessage('2. ابحث عن: \u200E@SmartAiLegalBot', 'bot');
     addMessage('3. أرسل /start للبدء', 'bot');
 }
