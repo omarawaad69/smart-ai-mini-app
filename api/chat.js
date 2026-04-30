@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!content) {
-      return res.status(200).json({ status: 'success', response: 'من فضلك أرسل سؤالك أو ملفك.' });
+      return res.status(200).json({ status: 'success', response: 'من فضلك أرسل سؤالك.' });
     }
 
     const response = await fetch(
@@ -36,10 +36,10 @@ export default async function handler(req, res) {
     if (reply) {
       return res.status(200).json({ status: 'success', response: reply });
     } else {
-      return res.status(200).json({ status: 'success', response: 'عذراً، لم أتمكن من معالجة طلبك. حاول مرة أخرى.' });
+      return res.status(200).json({ status: 'success', response: 'عذراً، لم أتمكن من معالجة طلبك.' });
     }
 
   } catch (error) {
-    return res.status(200).json({ status: 'success', response: 'عذراً، حدث خطأ مؤقت. حاول مرة أخرى.' });
+    return res.status(200).json({ status: 'success', response: 'عذراً، حدث خطأ مؤقت.' });
   }
 }
