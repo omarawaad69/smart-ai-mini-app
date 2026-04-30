@@ -18,11 +18,9 @@ async function sendMessage() {
     
     if (!text) return;
     
-    // إظهار رسالة المستخدم
     addMessage(text, 'user');
     input.value = '';
     
-    // إظهار تحميل
     const chatArea = document.getElementById('chatArea');
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'message bot-message';
@@ -40,11 +38,9 @@ async function sendMessage() {
         
         const data = await response.json();
         
-        // إزالة التحميل
         const loading = document.getElementById('loadingMessage');
         if (loading) loading.remove();
         
-        // إظهار الرد
         if (data.response) {
             addMessage(data.response, 'bot');
         } else {
@@ -137,5 +133,5 @@ function handleDocUpload() {
 }
 
 function openBot() {
-    window.open('https://t.me/SmartAiLegalBot', '_blank');
+    window.location.href = 'https://t.me/SmartAiLegalBot';
 }
