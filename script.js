@@ -133,5 +133,6 @@ function handleDocUpload() {
 }
 
 function openBot() {
-    window.location.href = 'https://t.me/SmartAiLegalBot';
+    // يعمل داخل WebView في تطبيقات أندرويد
+    window.location.replace('intent://t.me/SmartAiLegalBot#Intent;scheme=https;package=org.telegram.messenger;end');
 }
