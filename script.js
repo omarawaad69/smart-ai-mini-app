@@ -133,6 +133,24 @@ function handleDocUpload() {
 }
 
 function openBot() {
-    // يعمل داخل WebView في تطبيقات أندرويد
-    window.location.replace('intent://t.me/SmartAiLegalBot#Intent;scheme=https;package=org.telegram.messenger;end');
+    var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    
+    // إذا كان المستخدم على أندرويد
+    if (/android/i.test(userAgent)) {
+        window.location.href = 'tg://resolve?domain=SmartAiLegalBot';
+    }
+    // إذا كان المستخدم على iOS
+    else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+        window.location.href = 'tg://resolve?domain=SmartAiLegalBot';
+    }
+    // إذا كان متصفح عادي
+    else {
+        window.open('https://t.me/SmartAiLegalBot', '_blank');
+    }
+    
+    // إذا لم يفتح شيء، نعرض رابط البوت
+    setTimeout(function() {
+        addMessage('🤖 *للتحدث مع البوت:*', 'bot');
+        addMessage('@SmartAiLegalBot', 'bot');
+    }, 500);
 }
