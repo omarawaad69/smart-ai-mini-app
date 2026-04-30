@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     
     if (!GEMINI_API_KEY) {
-      return res.status(500).json({ status: 'error', message: 'مفتاح API غير موجود' });
+      return res.status(500).json({ status: 'error', message: 'مفتاح API غير موجود في الخادم' });
     }
     
     let parts = [{ text: content || 'مرحباً' }];
@@ -42,13 +42,19 @@ export default async function handler(req, res) {
     const data = await response.json();
     
     if (data.error) {
-      return res.status(500).json({ status: 'error', message: data.error.message });
+      console.error('Gemini API Error:', data.error);
+      return res.status(500).json({ status: 'error', message: data.error.message || 'خطأ من Gemini' });
     }
     
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'عذراً، لم أتمكن من الإجابة.';
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!reply) {
+      return res.status(500).json({ status: 'error', message: 'لم يتم استلام رد من Gemini' });
+    }
 
     return res.status(200).json({ status: 'success', response: reply });
   } catch (error) {
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم' });
+    console.error('Server Error:', error);
+    return res.status(500).json({ status: 'error', message: 'حدث خطأ غير متوقع في الخادم' });
   }
 }
