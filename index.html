@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Version 3.0 - Full Features Update -->
     <div class="app-container">
         <header class="app-header">
             <h1>🤖 Smart AI Bot</h1>
@@ -23,7 +24,6 @@
             </div>
         </div>
 
-        <!-- شبكة الأزرار الكاملة -->
         <div class="features-grid">
             <button class="feature-btn" onclick="sendTextPrompt()">
                 <span class="icon">💬</span>
@@ -41,23 +41,21 @@
                 <span class="icon">🎤</span>
                 <span>رسالة صوتية</span>
             </button>
-            <button class="feature-btn" onclick="document.getElementById('convertInput').click()">
+            <button class="feature-btn" onclick="showConversionOptions()">
                 <span class="icon">🔄</span>
                 <span>تحويل ملفات</span>
             </button>
-            <button class="feature-btn" onclick="showConversionOptions()">
+            <button class="feature-btn" onclick="showExcelPrompt()">
                 <span class="icon">📊</span>
                 <span>إنشاء Excel</span>
             </button>
         </div>
 
-        <!-- مدخلات مخفية -->
         <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload()">
         <input type="file" id="docInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleDocUpload()">
         <input type="file" id="audioInput" accept="audio/*" style="display:none" onchange="handleAudioUpload()">
         <input type="file" id="convertInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleConvertUpload()">
 
-        <!-- منطقة الإدخال -->
         <div class="input-area">
             <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button onclick="sendMessage()">📤</button>
