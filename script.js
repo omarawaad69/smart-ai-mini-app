@@ -1,6 +1,35 @@
 const API_URL = '/api/chat';
-const BOT_API_URL = 'https://ai-bot-production-2db2.up.railway.app/api/chat';
-const BOT_UPLOAD_URL = 'https://ai-bot-production-2db2.up.railway.app/api/upload';
+const BOT_LINK = 'https://t.me/SmartAiLegalBot';
+
+// ==================== شاشة البداية والقائمة ====================
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.style.right === '0px') {
+        sidebar.style.right = '-280px';
+    } else {
+        sidebar.style.right = '0px';
+    }
+}
+
+function closeSidebar() {
+    document.getElementById('sidebar').style.right = '-280px';
+}
+
+function navigateTo(section) {
+    closeSidebar();
+    if (section === 'chat') sendTextPrompt();
+    else if (section === 'image') document.getElementById('imageInput').click();
+    else if (section === 'document') document.getElementById('docInput').click();
+    else if (section === 'convert') openBotForConversion();
+    else if (section === 'excel') showExcelPrompt();
+}
+
+function openBot() {
+    window.open(BOT_LINK, '_blank');
+}
+
+// ==================== المحادثة ====================
 
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
@@ -19,7 +48,7 @@ function showLoading() {
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'message bot-message';
     loadingDiv.id = 'loadingMessage';
-    loadingDiv.innerHTML = '<div class="message-content"><div class="loading"></div></div>';
+    loadingDiv.innerHTML = '<div class="message-content">⏳ جاري المعالجة...</div>';
     chatArea.appendChild(loadingDiv);
     chatArea.scrollTop = chatArea.scrollHeight;
 }
@@ -29,44 +58,12 @@ function hideLoading() {
     if (loading) loading.remove();
 }
 
-// ==================== المحادثة النصية ====================
-
-async function sendMessage() {
-    const input = document.getElementById('userInput');
-    const text = input.value.trim();
-    if (!text) return;
-    
-    // التعامل مع اختيارات التحويل
-    if (window.waitingForConversion && text) {
-        const formatMap = {
-            '1': 'pdf', 'pdf': 'pdf',
-            '2': 'docx', 'word': 'docx', 'docx': 'docx',
-            '3': 'pdf', '4': 'xlsx', 'excel': 'xlsx', 'xlsx': 'xlsx',
-            '5': 'docx', '6': 'xlsx'
-        };
-        
-        window.lastConversionChoice = formatMap[text.toLowerCase()] || text.toLowerCase();
-        window.waitingForConversion = false;
-        
-        addMessage(`✅ تم اختيار التحويل إلى: ${window.lastConversionChoice.toUpperCase()}`, 'user');
-        addMessage(`📁 الآن أرسل الملف الذي تريد تحويله`, 'bot');
-        input.value = '';
-        
-        setTimeout(() => {
-            document.getElementById('convertInput').click();
-        }, 500);
-        return;
-    }
-    
-    addMessage(text, 'user');
-    input.value = '';
-    showLoading();
-
+async function sendToAPI(content, type = 'text', extraData = {}) {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: text, type: 'text' })
+            body: JSON.stringify({ content, type, ...extraData })
         });
         const data = await response.json();
         hideLoading();
@@ -81,184 +78,81 @@ async function sendMessage() {
     }
 }
 
+async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+    addMessage(text, 'user');
+    input.value = '';
+    showLoading();
+    await sendToAPI(text);
+}
+
 function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
         addMessage(text, 'user');
         showLoading();
-        fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: text, type: 'text' })
-        })
-        .then(response => response.json())
-        .then(data => {
-            hideLoading();
-            if (data.status === 'success') addMessage(data.response, 'bot');
-            else addMessage('❌ حدث خطأ', 'bot');
-        })
-        .catch(() => {
-            hideLoading();
-            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-        });
+        sendToAPI(text);
     }
 }
 
 // ==================== تحليل الصور ====================
 
 function handleImageUpload() {
-    const input = document.getElementById('imageInput');
-    const file = input.files[0];
+    const file = document.getElementById('imageInput').files[0];
     if (!file) return;
-    
     addMessage(`🖼️ جاري تحليل: ${file.name}`, 'user');
     showLoading();
-    
     const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: 'حلل هذه الصورة',
-                    type: 'analyze_image',
-                    imageData: e.target.result.split(',')[1]
-                })
-            });
-            const data = await response.json();
-            hideLoading();
-            if (data.status === 'success') addMessage(data.response, 'bot');
-            else addMessage('❌ حدث خطأ في تحليل الصورة', 'bot');
-        } catch (error) {
-            hideLoading();
-            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-        }
+    reader.onload = function(e) {
+        sendToAPI('حلل هذه الصورة بالتفصيل', 'analyze_image', { imageData: e.target.result.split(',')[1] });
     };
     reader.readAsDataURL(file);
-    input.value = '';
+    document.getElementById('imageInput').value = '';
 }
 
 // ==================== تحليل المستندات ====================
 
 function handleDocUpload() {
-    const input = document.getElementById('docInput');
-    const file = input.files[0];
+    const file = document.getElementById('docInput').files[0];
     if (!file) return;
-    
     addMessage(`📄 جاري تحليل: ${file.name}`, 'user');
     showLoading();
-    
     const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: e.target.result.substring(0, 10000),
-                    type: 'analyze_document'
-                })
-            });
-            const data = await response.json();
-            hideLoading();
-            if (data.status === 'success') addMessage(data.response, 'bot');
-            else addMessage('❌ حدث خطأ', 'bot');
-        } catch (error) {
-            hideLoading();
-            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-        }
+    reader.onload = function(e) {
+        sendToAPI(e.target.result.substring(0, 8000), 'analyze_document');
     };
     reader.readAsText(file);
-    input.value = '';
-}
-
-// ==================== تحويل الملفات عبر Railway ====================
-
-async function handleConvertUpload() {
-    const input = document.getElementById('convertInput');
-    const file = input.files[0];
-    if (!file) return;
-    
-    const targetFormat = window.lastConversionChoice || 'pdf';
-    
-    addMessage(`🔄 جاري تحويل ${file.name} إلى ${targetFormat.toUpperCase()}...`, 'user');
-    showLoading();
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('target', targetFormat);
-    
-    try {
-        const response = await fetch(BOT_UPLOAD_URL, {
-            method: 'POST',
-            body: formData
-        });
-        const data = await response.json();
-        hideLoading();
-        
-        if (data.status === 'success') {
-            addMessage(`✅ تم تحويل الملف بنجاح إلى ${targetFormat.toUpperCase()}`, 'bot');
-            if (data.response) {
-                addMessage(data.response, 'bot');
-            }
-        } else {
-            addMessage('❌ فشل تحويل الملف. تأكد من أن الملف غير تالف وغير محمي بكلمة مرور.', 'bot');
-        }
-    } catch (error) {
-        hideLoading();
-        addMessage('❌ تعذر الاتصال بخادم التحويل. حاول مرة أخرى.', 'bot');
-    }
-    
-    input.value = '';
+    document.getElementById('docInput').value = '';
 }
 
 // ==================== الصوت ====================
 
 function handleAudioUpload() {
-    const input = document.getElementById('audioInput');
-    const file = input.files[0];
+    const file = document.getElementById('audioInput').files[0];
     if (!file) return;
-    
-    addMessage(`🎤 جاري معالجة: ${file.name}`, 'user');
-    addMessage('🎤 *ملاحظة:* معالجة الصوت ستكون متاحة قريباً. حالياً يمكنك إرسال الرسائل الصوتية مباشرة لبوت تيليجرام.', 'bot');
-    input.value = '';
-}
-
-// ==================== تحويل الملفات ====================
-
-function showConversionOptions() {
-    addMessage('🔄 *اختر نوع التحويل:*', 'bot');
-    addMessage('1️⃣ PDF\n2️⃣ Word\n3️⃣ Excel', 'bot');
-    addMessage('✏️ *اكتب الرقم في مربع الإدخال أدناه*', 'bot');
-    window.waitingForConversion = true;
+    addMessage(`🎤 تم استلام: ${file.name}`, 'user');
+    addMessage('🎤 لتحويل الصوت إلى نص، افتح البوت في تيليجرام وأرسل الرسالة الصوتية.', 'bot');
+    document.getElementById('audioInput').value = '';
 }
 
 // ==================== إنشاء Excel ====================
 
 function showExcelPrompt() {
-    const text = prompt('أدخل البيانات لإنشاء ملف Excel:\n\nمثال: الاسم, العمر, المدينة\nأحمد, 25, القاهرة\nمحمد, 30, الإسكندرية');
+    const text = prompt('أدخل البيانات لإنشاء ملف Excel:\n\nمثال: الاسم, العمر, المدينة\nأحمد, 25, القاهرة');
     if (text) {
-        addMessage(`📊 جاري معالجة البيانات...`, 'user');
+        addMessage('📊 جاري معالجة البيانات...', 'user');
         showLoading();
-        fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: text, type: 'create_excel' })
-        })
-        .then(response => response.json())
-        .then(data => {
-            hideLoading();
-            if (data.status === 'success') addMessage(data.response, 'bot');
-            else addMessage('❌ حدث خطأ', 'bot');
-        })
-        .catch(() => {
-            hideLoading();
-            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-        });
+        sendToAPI(text, 'create_excel');
     }
 }
 
-// ==================== متغيرات عامة ====================
-window.waitingForConversion = false;
-window.lastConversionChoice = null;
+// ==================== تحويل الملفات (يفتح البوت) ====================
+
+function openBotForConversion() {
+    addMessage('🤖 *لتحويل الملفات:* سيفتح البوت في تيليجرام. أرسل الملف مع تعليق: *حول لـ pdf* أو *حول لـ word* أو *حول لـ excel*', 'bot');
+    setTimeout(() => {
+        window.open(BOT_LINK, '_blank');
+    }, 1000);
+}
