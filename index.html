@@ -19,7 +19,7 @@
                 <div class="message-content">
                     🎉 أهلاً بك! أنا مستشار الذكاء الاصطناعي الخارق.
                     <br><br>
-                    أرسل سؤالك أو ملفك وسأجيبك فوراً.
+                    أرسل سؤالك، صورتك، أو ملفك وسأجيبك فوراً.
                 </div>
             </div>
         </div>
@@ -29,11 +29,11 @@
                 <span class="icon">💬</span>
                 <span>محادثة</span>
             </button>
-            <button class="feature-btn" onclick="document.getElementById('imageInput').click()">
+            <button class="feature-btn" onclick="triggerImageUpload()">
                 <span class="icon">🖼️</span>
                 <span>تحليل صورة</span>
             </button>
-            <button class="feature-btn" onclick="document.getElementById('docInput').click()">
+            <button class="feature-btn" onclick="triggerDocUpload()">
                 <span class="icon">📄</span>
                 <span>رفع ملف</span>
             </button>
@@ -43,11 +43,10 @@
             </button>
         </div>
 
-        <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload()">
-        <input type="file" id="docInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv" style="display:none" onchange="handleDocUpload()">
+        <!-- ملاحظة: تم حذف وسوم <input> لأنها ستُنشأ ديناميكياً عبر JavaScript -->
 
         <div class="input-area">
-            <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <input type="text" id="userInput" placeholder="اكتب سؤالك أو تعليقك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button class="send-btn" onclick="sendMessage()">➤</button>
         </div>
 
