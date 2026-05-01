@@ -19,23 +19,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: 'success', response: 'من فضلك أرسل سؤالك أو صورتك.' });
     }
 
-    let requestBody = {
-      contents: [{
-        parts: []
-      }],
-      systemInstruction: {
-        parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ مباشرة بدون مقدمات." }]
-      }
-    };
+    let parts = [];
 
-    // إضافة النص (إذا وجد)
     if (content) {
-      requestBody.contents[0].parts.push({ text: content });
+      parts.push({ text: content });
     }
 
-    // إضافة الصورة (إذا وجدت)
     if (imageData) {
-      requestBody.contents[0].parts.push({
+      parts.push({
         inline_data: {
           mime_type: 'image/jpeg',
           data: imageData
@@ -48,7 +39,12 @@ export default async function handler(req, res) {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          contents: [{ parts }],
+          systemInstruction: {
+            parts: [{ text: "أنت مستشار الذكاء الاصطناعي الخارق. أجب بدقة واحترافية. ابدأ مباشرة بدون مقدمات." }]
+          }
+        })
       }
     );
 
