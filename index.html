@@ -25,13 +25,12 @@
             </div>
         </div>
 
-        <!-- الشبكة الرئيسية للأزرار -->
         <div class="features-grid">
             <button class="feature-btn" onclick="sendTextPrompt()">
                 <span class="icon">💬</span>
                 <span>محادثة</span>
             </button>
-            <button class="feature-btn" onclick="triggerImageUpload()">
+            <button class="feature-btn" onclick="triggerImagePick('gallery')">
                 <span class="icon">🖼️</span>
                 <span>تحليل صورة</span>
             </button>
@@ -43,27 +42,16 @@
                 <span class="icon">🤖</span>
                 <span>فتح البوت</span>
             </button>
-            <!-- زر التقاط صورة يفتح الكاميرا مباشرة مع بث حي -->
-            <button class="feature-btn" onclick="startCamera('photo')">
+            <button class="feature-btn" onclick="triggerImagePick('camera')">
                 <span class="icon">📸</span>
                 <span>التقاط صورة</span>
             </button>
-            <!-- زر ترجمة حية يفتح الكاميرا ثم يترجم بعد الالتقاط -->
-            <button class="feature-btn" onclick="startCamera('translate')">
+            <button class="feature-btn" onclick="triggerLiveTranslate()">
                 <span class="icon">🌐</span>
                 <span>ترجمة حية</span>
             </button>
         </div>
 
-        <!-- منطقة عرض بث الكاميرا والتقاط الصورة -->
-        <div id="cameraContainer" style="display: none; text-align: center; margin: 10px 0;">
-            <video id="cameraStream" autoplay playsinline style="width: 100%; max-width: 350px; border-radius: 15px;"></video>
-            <br>
-            <button class="send-btn" onclick="captureFromCamera()" style="margin-top: 10px;">📷 التقط الصورة</button>
-            <button class="feature-btn" onclick="stopCamera()" style="margin-top: 5px; display: block; width: 100%;">إلغاء</button>
-        </div>
-
-        <!-- مربع الإدخال والإرسال -->
         <div class="input-area">
             <input type="text" id="userInput" placeholder="اكتب سؤالك أو تعليقك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button class="send-btn" onclick="sendMessage()">➤</button>
