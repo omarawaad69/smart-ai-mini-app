@@ -2,6 +2,8 @@ const API_URL = '/api/chat';
 const USER_ID = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
 let pendingImage = null;
+let mediaStream = null;
+let cameraMode = 'photo'; // 'photo' أو 'translate'
 const MAX_IMAGE_WIDTH = 800;
 const IMAGE_QUALITY = 0.6;
 
@@ -96,7 +98,6 @@ function createFileInput(id, accept, changeHandler) {
 }
 
 function resetInputValue(input) {
-    // لتفريغ الحقل ليتمكن من إعادة استخدام نفس الملف
     input.value = '';
 }
 
@@ -177,53 +178,98 @@ function openBot() {
     addMessage('3. أرسل /start للبدء', 'bot');
 }
 
-// ==================== التقاط الصور والترجمة ====================
+// ==================== الكاميرا والتقاط الصور ====================
 
-function handleCameraCapture(input) {
-    const file = input.files[0];
-    if (!file) return;
-    addMessage('📸 جاري معالجة الصورة...', 'user');
-    compressImage(file).then((compressed) => {
-        pendingImage = compressed;
-        addMessage('✅ تم التقاط الصورة. اكتب تعليقك (أو اتركه فارغاً) ثم اضغط إرسال.', 'bot');
-    }).catch(() => {
-        addMessage('❌ فشل معالجة الصورة.', 'bot');
-    });
-    resetInputValue(input);
-}
-
-function triggerLiveTranslateCapture() {
-    const targetLang = prompt('إلى أي لغة تريد الترجمة؟ (مثال: الإنجليزية، الفرنسية)', 'الإنجليزية');
-    if (!targetLang) return;
-    window.liveTranslateLang = targetLang;
-    addMessage(`🌐 سيتم الترجمة إلى ${targetLang}.`, 'bot');
-    document.getElementById('liveTranslateInput').click();
-}
-
-async function handleLiveTranslateCapture(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const lang = window.liveTranslateLang || 'الإنجليزية';
-    addMessage(`🌐 جاري استخراج النص وترجمته إلى ${lang}...`, 'user');
-    showLoading('⏳ جاري تحليل الصورة والترجمة...');
+async function startCamera(mode) {
+    cameraMode = mode;
+    const video = document.getElementById('cameraStream');
+    const container = document.getElementById('cameraContainer');
     
     try {
-        // 1. OCR باستخراج النص من الصورة
-        const ocrResult = await Tesseract.recognize(file, 'ara+eng');
+        // طلب الكاميرا الخلفية
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+            audio: false
+        });
+        video.srcObject = mediaStream;
+        container.style.display = 'block';
+        addMessage(`📸 الكاميرا جاهزة لل${mode === 'translate' ? 'ترجمة حية' : 'تصوير'}. وجه الكاميرا واضغط "التقط".`, 'bot');
+    } catch (err) {
+        console.error("خطأ في الكاميرا: ", err);
+        addMessage('❌ لم نتمكن من الوصول إلى الكاميرا. تأكد من أن التطبيق لديه إذن الكاميرا في إعدادات هاتفك.', 'bot');
+    }
+}
+
+function stopCamera() {
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+    document.getElementById('cameraContainer').style.display = 'none';
+}
+
+function captureFromCamera() {
+    const video = document.getElementById('cameraStream');
+    if (!video.videoWidth) return;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // إيقاف الكاميرا
+    stopCamera();
+    
+    // تحويل الصورة إلى Base64
+    const imageData = canvas.toDataURL('image/jpeg', IMAGE_QUALITY).split(',')[1];
+    
+    if (cameraMode === 'translate') {
+        // وضع الترجمة الحية
+        handleLiveTranslation(imageData);
+    } else {
+        // وضع التصوير العادي
+        pendingImage = imageData;
+        addMessage('📸 تم التقاط الصورة. اكتب تعليقك (أو اتركه فارغاً) ثم اضغط إرسال.', 'bot');
+    }
+}
+
+// ==================== الترجمة الحية ====================
+
+async function handleLiveTranslation(imageData) {
+    const targetLang = prompt('إلى أي لغة تريد الترجمة؟ (مثال: الإنجليزية، الفرنسية)', 'الإنجليزية');
+    if (!targetLang) return;
+    
+    addMessage(`🌐 جاري الترجمة إلى ${targetLang}...`, 'user');
+    showLoading('⏳ جاري استخراج النص من الصورة...');
+    
+    try {
+        // 1. استخراج النص باستخدام Tesseract
+        const img = new Image();
+        img.src = 'data:image/jpeg;base64,' + imageData;
+        
+        // انتظر حتى يتم تحميل الصورة
+        await new Promise((resolve) => { img.onload = resolve; });
+        
+        const ocrResult = await Tesseract.recognize(img, 'ara+eng');
         const extractedText = ocrResult.data.text.trim();
         
         if (extractedText) {
             addMessage(`📖 النص المستخرج: ${extractedText}`, 'user');
-            // 2. ترجمة النص المستخرج
-            const prompt = `ترجم النص التالي إلى ${lang}. أرسل الترجمة فقط بدون أي كلام إضافي:\n\n${extractedText}`;
+            hideLoading();
+            showLoading('⏳ جاري ترجمة النص...');
+            
+            // 2. ترجمة النص
+            const prompt = `ترجم النص التالي إلى ${targetLang}. أرسل الترجمة فقط بدون أي كلام إضافي:\n\n${extractedText}`;
             await sendToAPI({ content: prompt });
+            hideLoading();
         } else {
             hideLoading();
-            addMessage('❌ لم يتم التعرف على أي نص في الصورة. حاول مجدداً.', 'bot');
+            addMessage('❌ لم يتم التعرف على أي نص في الصورة. حاول التقاط صورة أوضح.', 'bot');
         }
     } catch (error) {
         hideLoading();
-        addMessage('❌ فشل تحليل الصورة. تأكد من وضوح النص.', 'bot');
+        console.error('خطأ في الترجمة:', error);
+        addMessage('❌ فشل تحليل الصورة. تأكد من وضوح النص وحاول مجدداً.', 'bot');
     }
-    resetInputValue(input);
 }
