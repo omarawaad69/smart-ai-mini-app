@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart AI Bot</title>
     <link rel="stylesheet" href="style.css">
+    <!-- مكتبة Tesseract.js لاستخراج النص من الصور -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -24,6 +26,7 @@
             </div>
         </div>
 
+        <!-- الشبكة الرئيسية للأزرار -->
         <div class="features-grid">
             <button class="feature-btn" onclick="sendTextPrompt()">
                 <span class="icon">💬</span>
@@ -41,10 +44,28 @@
                 <span class="icon">🤖</span>
                 <span>فتح البوت</span>
             </button>
+            <button class="feature-btn" onclick="openCamera()">
+                <span class="icon">📸</span>
+                <span>التقاط صورة</span>
+            </button>
+            <button class="feature-btn" onclick="startLiveTranslation()" id="liveTranslationBtn">
+                <span class="icon">🌐</span>
+                <span>ترجمة حية</span>
+            </button>
+            <button class="feature-btn" onclick="stopLiveTranslation()" id="stopTranslationBtn" style="display: none;">
+                <span class="icon">⏹️</span>
+                <span>إيقاف</span>
+            </button>
         </div>
 
-        <!-- ملاحظة: تم حذف وسوم <input> لأنها ستُنشأ ديناميكياً عبر JavaScript -->
+        <!-- منطقة عرض الكاميرا -->
+        <div id="cameraContainer" style="display: none; text-align: center; margin: 10px 0;">
+            <video id="cameraStream" autoplay playsinline style="width: 100%; max-width: 300px; border-radius: 15px;"></video>
+            <br>
+            <button class="send-btn" onclick="capturePhoto()" style="margin-top: 10px;">📷 التقط</button>
+        </div>
 
+        <!-- مربع الإدخال والإرسال -->
         <div class="input-area">
             <input type="text" id="userInput" placeholder="اكتب سؤالك أو تعليقك هنا..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button class="send-btn" onclick="sendMessage()">➤</button>
