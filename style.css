@@ -45,7 +45,7 @@ body {
     overflow-y: auto;
     padding: 10px;
     margin-bottom: 10px;
-    max-height: 60vh;
+    max-height: 50vh;
 }
 
 .message {
@@ -87,15 +87,16 @@ body {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
-    padding: 15px;
+    padding: 12px 5px;
     color: #fff;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    font-size: 0.9em;
+    gap: 5px;
+    font-size: 0.8em;
+    text-align: center;
 }
 
 .feature-btn:active {
@@ -103,7 +104,7 @@ body {
     transform: scale(0.95);
 }
 
-.feature-btn .icon { font-size: 2em; }
+.feature-btn .icon { font-size: 1.8em; }
 
 .input-area {
     display: flex;
