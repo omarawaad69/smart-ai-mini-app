@@ -2,8 +2,7 @@ const API_URL = '/api/chat';
 const USER_ID = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
 let pendingImage = null;
-let mediaStream = null;
-let cameraMode = 'photo'; // 'photo' أو 'translate'
+let translateMode = false;
 const MAX_IMAGE_WIDTH = 800;
 const IMAGE_QUALITY = 0.6;
 
@@ -84,21 +83,30 @@ async function sendToAPI(payload) {
     }
 }
 
-function createFileInput(id, accept, changeHandler) {
-    const oldInput = document.getElementById(id);
+function createFileInput(accept, capture, changeHandler) {
+    // إزالة أي input سابق
+    const oldInput = document.getElementById('dynamicFileInput');
     if (oldInput) oldInput.remove();
+
     const newInput = document.createElement('input');
     newInput.type = 'file';
-    newInput.id = id;
+    newInput.id = 'dynamicFileInput';
     newInput.accept = accept;
     newInput.style.display = 'none';
-    newInput.onchange = changeHandler;
+    
+    // إذا كان الكاميرا مطلوبة، نضيف capture
+    if (capture) {
+        newInput.setAttribute('capture', 'environment');
+    }
+    
+    newInput.onchange = function() {
+        changeHandler(newInput);
+        // إعادة تعيين القيمة للسماح باختيار نفس الملف مرة أخرى
+        newInput.value = '';
+    };
+    
     document.body.appendChild(newInput);
     return newInput;
-}
-
-function resetInputValue(input) {
-    input.value = '';
 }
 
 // ==================== المحادثة والصور والملفات ====================
@@ -133,13 +141,23 @@ function sendTextPrompt() {
     }
 }
 
-function triggerImageUpload() {
-    const input = createFileInput('imageInput', 'image/*', handleImageUpload);
+// فتح المعرض أو الكاميرا لاختيار صورة
+function triggerImagePick(mode) {
+    translateMode = false;
+    const input = createFileInput('image/*', mode === 'camera', handleImageFile);
     input.click();
 }
 
-function handleImageUpload() {
-    const file = this.files[0];
+// فتح الكاميرا للترجمة الحية
+function triggerLiveTranslate() {
+    translateMode = true;
+    const input = createFileInput('image/*', true, handleLiveTranslateFile);
+    input.click();
+}
+
+// معالج الصورة (للتحليل)
+function handleImageFile(input) {
+    const file = input.files[0];
     if (!file) return;
     addMessage(`🖼️ جاري معالجة: ${file.name}...`, 'user');
     compressImage(file).then((compressed) => {
@@ -149,16 +167,59 @@ function handleImageUpload() {
     }).catch(() => {
         addMessage('❌ فشل معالجة الصورة.', 'bot');
     });
-    resetInputValue(this);
 }
 
+// معالج الصورة (للترجمة الحية)
+function handleLiveTranslateFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    addMessage('🌐 جاري تحليل الصورة...', 'user');
+    showLoading('⏳ جاري استخراج النص من الصورة...');
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const imageData = e.target.result.split(',')[1];
+        
+        try {
+            // استخراج النص باستخدام Tesseract
+            const img = new Image();
+            img.src = e.target.result;
+            await new Promise((resolve) => { img.onload = resolve; });
+            
+            const ocrResult = await Tesseract.recognize(img, 'ara+eng');
+            const extractedText = ocrResult.data.text.trim();
+            
+            if (extractedText) {
+                addMessage(`📖 النص المستخرج: ${extractedText}`, 'user');
+                hideLoading();
+                
+                const targetLang = prompt('إلى أي لغة تريد الترجمة؟', 'الإنجليزية');
+                if (!targetLang) return;
+                
+                showLoading('⏳ جاري الترجمة...');
+                const prompt = `ترجم النص التالي إلى ${targetLang}. أرسل الترجمة فقط:\n\n${extractedText}`;
+                await sendToAPI({ content: prompt });
+            } else {
+                hideLoading();
+                addMessage('❌ لم يتم التعرف على نص في الصورة. حاول التقاط صورة أوضح.', 'bot');
+            }
+        } catch (error) {
+            hideLoading();
+            addMessage('❌ فشل تحليل الصورة.', 'bot');
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+// رفع مستند
 function triggerDocUpload() {
-    const input = createFileInput('docInput', '.pdf,.docx,.xlsx,.pptx,.txt,.csv', handleDocUpload);
+    const input = createFileInput('.pdf,.docx,.xlsx,.pptx,.txt,.csv', false, handleDocFile);
     input.click();
 }
 
-function handleDocUpload() {
-    const file = this.files[0];
+function handleDocFile(input) {
+    const file = input.files[0];
     if (!file) return;
     addMessage(`📄 جاري قراءة: ${file.name}`, 'user');
     const reader = new FileReader();
@@ -168,7 +229,6 @@ function handleDocUpload() {
         sendToAPI({ content: 'حلل هذا المستند:\n\n' + text });
     };
     reader.readAsText(file);
-    resetInputValue(this);
 }
 
 function openBot() {
@@ -176,100 +236,4 @@ function openBot() {
     addMessage('1. افتح تطبيق تيليجرام', 'bot');
     addMessage('2. ابحث عن: \u200E@SmartAiLegalBot', 'bot');
     addMessage('3. أرسل /start للبدء', 'bot');
-}
-
-// ==================== الكاميرا والتقاط الصور ====================
-
-async function startCamera(mode) {
-    cameraMode = mode;
-    const video = document.getElementById('cameraStream');
-    const container = document.getElementById('cameraContainer');
-    
-    try {
-        // طلب الكاميرا الخلفية
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
-        });
-        video.srcObject = mediaStream;
-        container.style.display = 'block';
-        addMessage(`📸 الكاميرا جاهزة لل${mode === 'translate' ? 'ترجمة حية' : 'تصوير'}. وجه الكاميرا واضغط "التقط".`, 'bot');
-    } catch (err) {
-        console.error("خطأ في الكاميرا: ", err);
-        addMessage('❌ لم نتمكن من الوصول إلى الكاميرا. تأكد من أن التطبيق لديه إذن الكاميرا في إعدادات هاتفك.', 'bot');
-    }
-}
-
-function stopCamera() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
-    }
-    document.getElementById('cameraContainer').style.display = 'none';
-}
-
-function captureFromCamera() {
-    const video = document.getElementById('cameraStream');
-    if (!video.videoWidth) return;
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // إيقاف الكاميرا
-    stopCamera();
-    
-    // تحويل الصورة إلى Base64
-    const imageData = canvas.toDataURL('image/jpeg', IMAGE_QUALITY).split(',')[1];
-    
-    if (cameraMode === 'translate') {
-        // وضع الترجمة الحية
-        handleLiveTranslation(imageData);
-    } else {
-        // وضع التصوير العادي
-        pendingImage = imageData;
-        addMessage('📸 تم التقاط الصورة. اكتب تعليقك (أو اتركه فارغاً) ثم اضغط إرسال.', 'bot');
-    }
-}
-
-// ==================== الترجمة الحية ====================
-
-async function handleLiveTranslation(imageData) {
-    const targetLang = prompt('إلى أي لغة تريد الترجمة؟ (مثال: الإنجليزية، الفرنسية)', 'الإنجليزية');
-    if (!targetLang) return;
-    
-    addMessage(`🌐 جاري الترجمة إلى ${targetLang}...`, 'user');
-    showLoading('⏳ جاري استخراج النص من الصورة...');
-    
-    try {
-        // 1. استخراج النص باستخدام Tesseract
-        const img = new Image();
-        img.src = 'data:image/jpeg;base64,' + imageData;
-        
-        // انتظر حتى يتم تحميل الصورة
-        await new Promise((resolve) => { img.onload = resolve; });
-        
-        const ocrResult = await Tesseract.recognize(img, 'ara+eng');
-        const extractedText = ocrResult.data.text.trim();
-        
-        if (extractedText) {
-            addMessage(`📖 النص المستخرج: ${extractedText}`, 'user');
-            hideLoading();
-            showLoading('⏳ جاري ترجمة النص...');
-            
-            // 2. ترجمة النص
-            const prompt = `ترجم النص التالي إلى ${targetLang}. أرسل الترجمة فقط بدون أي كلام إضافي:\n\n${extractedText}`;
-            await sendToAPI({ content: prompt });
-            hideLoading();
-        } else {
-            hideLoading();
-            addMessage('❌ لم يتم التعرف على أي نص في الصورة. حاول التقاط صورة أوضح.', 'bot');
-        }
-    } catch (error) {
-        hideLoading();
-        console.error('خطأ في الترجمة:', error);
-        addMessage('❌ فشل تحليل الصورة. تأكد من وضوح النص وحاول مجدداً.', 'bot');
-    }
 }
