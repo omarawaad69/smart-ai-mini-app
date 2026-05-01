@@ -2,9 +2,6 @@ const API_URL = '/api/chat';
 const USER_ID = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
 let pendingImage = null;
-let mediaStream = null;
-let translationInterval = null;
-let targetLang = 'الإنجليزية'; // اللغة الافتراضية للترجمة الحية
 const MAX_IMAGE_WIDTH = 800;
 const IMAGE_QUALITY = 0.6;
 
@@ -37,7 +34,6 @@ function hideLoading() {
     if (loading) loading.remove();
 }
 
-// ضغط الصورة قبل الإرسال
 function compressImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -64,7 +60,6 @@ function compressImage(file) {
     });
 }
 
-// إرسال طلب إلى الخادم
 async function sendToAPI(payload) {
     try {
         const response = await fetch(API_URL, {
@@ -87,7 +82,6 @@ async function sendToAPI(payload) {
     }
 }
 
-// دالة لإنشاء input file جديد (لحل مشكلة الرفع المتعدد)
 function createFileInput(id, accept, changeHandler) {
     const oldInput = document.getElementById(id);
     if (oldInput) oldInput.remove();
@@ -101,9 +95,13 @@ function createFileInput(id, accept, changeHandler) {
     return newInput;
 }
 
+function resetInputValue(input) {
+    // لتفريغ الحقل ليتمكن من إعادة استخدام نفس الملف
+    input.value = '';
+}
+
 // ==================== المحادثة والصور والملفات ====================
 
-// إرسال رسالة نصية (أو صورة مع تعليق)
 async function sendMessage() {
     const input = document.getElementById('userInput');
     const text = input.value.trim();
@@ -125,7 +123,6 @@ async function sendMessage() {
     await sendToAPI({ content: text });
 }
 
-// زر محادثة
 function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
@@ -135,13 +132,11 @@ function sendTextPrompt() {
     }
 }
 
-// فتح المعرض لاختيار صورة
 function triggerImageUpload() {
     const input = createFileInput('imageInput', 'image/*', handleImageUpload);
     input.click();
 }
 
-// معالج اختيار الصورة
 function handleImageUpload() {
     const file = this.files[0];
     if (!file) return;
@@ -153,15 +148,14 @@ function handleImageUpload() {
     }).catch(() => {
         addMessage('❌ فشل معالجة الصورة.', 'bot');
     });
+    resetInputValue(this);
 }
 
-// فتح المعرض لاختيار ملف
 function triggerDocUpload() {
     const input = createFileInput('docInput', '.pdf,.docx,.xlsx,.pptx,.txt,.csv', handleDocUpload);
     input.click();
 }
 
-// معالج اختيار الملف
 function handleDocUpload() {
     const file = this.files[0];
     if (!file) return;
@@ -173,9 +167,9 @@ function handleDocUpload() {
         sendToAPI({ content: 'حلل هذا المستند:\n\n' + text });
     };
     reader.readAsText(file);
+    resetInputValue(this);
 }
 
-// فتح البوت
 function openBot() {
     addMessage('🤖 *للتحدث مع البوت:*', 'bot');
     addMessage('1. افتح تطبيق تيليجرام', 'bot');
@@ -183,105 +177,53 @@ function openBot() {
     addMessage('3. أرسل /start للبدء', 'bot');
 }
 
-// ==================== الكاميرا والتقاط الصور ====================
+// ==================== التقاط الصور والترجمة ====================
 
-async function openCamera() {
-    const video = document.getElementById('cameraStream');
-    const container = document.getElementById('cameraContainer');
+function handleCameraCapture(input) {
+    const file = input.files[0];
+    if (!file) return;
+    addMessage('📸 جاري معالجة الصورة...', 'user');
+    compressImage(file).then((compressed) => {
+        pendingImage = compressed;
+        addMessage('✅ تم التقاط الصورة. اكتب تعليقك (أو اتركه فارغاً) ثم اضغط إرسال.', 'bot');
+    }).catch(() => {
+        addMessage('❌ فشل معالجة الصورة.', 'bot');
+    });
+    resetInputValue(input);
+}
+
+function triggerLiveTranslateCapture() {
+    const targetLang = prompt('إلى أي لغة تريد الترجمة؟ (مثال: الإنجليزية، الفرنسية)', 'الإنجليزية');
+    if (!targetLang) return;
+    window.liveTranslateLang = targetLang;
+    addMessage(`🌐 سيتم الترجمة إلى ${targetLang}.`, 'bot');
+    document.getElementById('liveTranslateInput').click();
+}
+
+async function handleLiveTranslateCapture(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const lang = window.liveTranslateLang || 'الإنجليزية';
+    addMessage(`🌐 جاري استخراج النص وترجمته إلى ${lang}...`, 'user');
+    showLoading('⏳ جاري تحليل الصورة والترجمة...');
+    
     try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
-        });
-        video.srcObject = mediaStream;
-        container.style.display = 'block';
-        addMessage('📸 الكاميرا جاهزة. وجّهها واضغط على "التقط".', 'bot');
-    } catch (err) {
-        console.error("خطأ في الوصول للكاميرا: ", err);
-        addMessage('❌ لم نتمكن من الوصول إلى الكاميرا. تأكد من منح الإذن.', 'bot');
-    }
-}
-
-function capturePhoto() {
-    const video = document.getElementById('cameraStream');
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // إيقاف الكاميرا
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-    }
-    document.getElementById('cameraContainer').style.display = 'none';
-    
-    // تحويل الصورة إلى Base64 وإرسالها للتحليل
-    canvas.toBlob(function(blob) {
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            const base64data = reader.result.split(',')[1];
-            pendingImage = base64data;
-            addMessage('📸 تم التقاط الصورة. اكتب تعليقك (أو اتركه فارغاً) ثم اضغط إرسال.', 'bot');
-        };
-        reader.readAsDataURL(blob);
-    }, 'image/jpeg', IMAGE_QUALITY);
-}
-
-// ==================== الترجمة الحية ====================
-
-async function startLiveTranslation() {
-    // طلب اللغة الهدف مرة واحدة
-    const lang = prompt('إلى أي لغة تريد الترجمة؟ (مثال: الإنجليزية، الفرنسية، الإسبانية)', targetLang);
-    if (lang) targetLang = lang;
-    
-    await openCamera();
-    document.getElementById('liveTranslationBtn').style.display = 'none';
-    document.getElementById('stopTranslationBtn').style.display = 'inline-block';
-    addMessage(`🌐 بدء الترجمة الحية إلى ${targetLang}...`, 'bot');
-    
-    const video = document.getElementById('cameraStream');
-    
-    translationInterval = setInterval(async () => {
-        if (!video.videoWidth) return;
+        // 1. OCR باستخراج النص من الصورة
+        const ocrResult = await Tesseract.recognize(file, 'ara+eng');
+        const extractedText = ocrResult.data.text.trim();
         
-        // التقاط إطار من الفيديو
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        
-        try {
-            // استخراج النص من الصورة باستخدام Tesseract
-            const { data: { text } } = await Tesseract.recognize(imageDataUrl, 'ara+eng');
-            if (text.trim() !== '') {
-                // ترجمة النص المستخرج
-                const prompt = `ترجم النص التالي إلى ${targetLang}. أرسل الترجمة فقط بدون أي كلام إضافي:\n\n${text.trim()}`;
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: prompt })
-                });
-                const data = await response.json();
-                if (data.response) {
-                    addMessage(`📖 النص: ${text.trim()}\n🌐 الترجمة: ${data.response}`, 'bot');
-                }
-            }
-        } catch (err) {
-            console.error('خطأ في الترجمة الحية:', err);
+        if (extractedText) {
+            addMessage(`📖 النص المستخرج: ${extractedText}`, 'user');
+            // 2. ترجمة النص المستخرج
+            const prompt = `ترجم النص التالي إلى ${lang}. أرسل الترجمة فقط بدون أي كلام إضافي:\n\n${extractedText}`;
+            await sendToAPI({ content: prompt });
+        } else {
+            hideLoading();
+            addMessage('❌ لم يتم التعرف على أي نص في الصورة. حاول مجدداً.', 'bot');
         }
-    }, 3000); // كل 3 ثواني
-}
-
-function stopLiveTranslation() {
-    clearInterval(translationInterval);
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
+    } catch (error) {
+        hideLoading();
+        addMessage('❌ فشل تحليل الصورة. تأكد من وضوح النص.', 'bot');
     }
-    document.getElementById('cameraContainer').style.display = 'none';
-    document.getElementById('liveTranslationBtn').style.display = 'inline-block';
-    document.getElementById('stopTranslationBtn').style.display = 'none';
-    addMessage('⏹️ تم إيقاف الترجمة الحية.', 'bot');
+    resetInputValue(input);
 }
