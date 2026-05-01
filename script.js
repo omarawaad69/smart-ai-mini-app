@@ -1,7 +1,11 @@
 const API_URL = '/api/chat';
 const USER_ID = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-let pendingImage = null; // تخزين الصورة المختارة مؤقتاً
+let pendingImage = null;
+
+// إعدادات الضغط
+const MAX_IMAGE_WIDTH = 800; // العرض الأقصى
+const IMAGE_QUALITY = 0.6;  // جودة الضغط (60%)
 
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
@@ -15,11 +19,42 @@ function addMessage(text, sender) {
     chatArea.scrollTop = chatArea.scrollHeight;
 }
 
+// دالة ضغط الصورة قبل الإرسال
+function compressImage(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // حساب الأبعاد الجديدة
+                let width = img.width;
+                let height = img.height;
+                if (width > MAX_IMAGE_WIDTH) {
+                    height = (height * MAX_IMAGE_WIDTH) / width;
+                    width = MAX_IMAGE_WIDTH;
+                }
+
+                // الرسم على canvas بحجم أصغر
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // استخراج Base64 بجودة مخفضة
+                const compressedBase64 = canvas.toDataURL('image/jpeg', IMAGE_QUALITY).split(',')[1];
+                resolve(compressedBase64);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 async function sendMessage() {
     const input = document.getElementById('userInput');
     const text = input.value.trim();
 
-    // إذا كانت هناك صورة معلقة، أرسلها مع النص (أو بدونه)
     if (pendingImage) {
         const caption = text || 'حلل هذه الصورة';
         addMessage(`🖼️ ${caption}`, 'user');
@@ -42,7 +77,7 @@ async function sendMessage() {
                 },
                 body: JSON.stringify({
                     content: caption,
-                    imageData: pendingImage
+                    imageData: pendingImage // الصورة مضغوطة بالفعل
                 })
             });
 
@@ -61,11 +96,11 @@ async function sendMessage() {
             addMessage('❌ تعذر الاتصال بالخادم', 'bot');
         }
 
-        pendingImage = null; // حذف الصورة بعد الإرسال
+        pendingImage = null;
         return;
     }
 
-    // إذا لم تكن هناك صورة، أرسل النص كالمعتاد
+    // إرسال نص عادي
     if (!text) return;
     addMessage(text, 'user');
     input.value = '';
@@ -104,23 +139,25 @@ async function sendMessage() {
     }
 }
 
-// عند الضغط على زر "تحليل صورة"
+// عند اختيار صورة
 function handleImageUpload() {
     const file = document.getElementById('imageInput').files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        // تخزين بيانات الصورة (base64)
-        pendingImage = e.target.result.split(',')[1];
-        addMessage(`🖼️ تم اختيار: ${file.name}`, 'user');
+    addMessage(`🖼️ جاري معالجة: ${file.name}...`, 'user');
+
+    compressImage(file).then((compressed) => {
+        pendingImage = compressed;
+        addMessage(`✅ تم تجهيز الصورة (مضغوطة).`, 'bot');
         addMessage('✏️ اكتب تعليقك (مثلاً: "ترجم النص في الصورة إلى الإنجليزية") ثم اضغط إرسال، أو اتركه فارغاً للتحليل العام.', 'bot');
-    };
-    reader.readAsDataURL(file);
-    document.getElementById('imageInput').value = ''; // لتفريغ الحقل حتى يمكن اختيار نفس الصورة مرة أخرى
+    }).catch(() => {
+        addMessage('❌ فشل معالجة الصورة.', 'bot');
+    });
+
+    document.getElementById('imageInput').value = '';
 }
 
-// بقية الدوال كما هي...
+// باقي الدوال (sendTextPrompt, handleDocUpload, openBot) كما هي بدون تغيير
 function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
@@ -202,4 +239,4 @@ function openBot() {
     addMessage('1. افتح تطبيق تيليجرام', 'bot');
     addMessage('2. ابحث عن: \u200E@SmartAiLegalBot', 'bot');
     addMessage('3. أرسل /start للبدء', 'bot');
-              }
+        }
