@@ -2,10 +2,8 @@ const API_URL = '/api/chat';
 const USER_ID = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
 let pendingImage = null;
-
-// إعدادات الضغط
-const MAX_IMAGE_WIDTH = 800; // العرض الأقصى
-const IMAGE_QUALITY = 0.6;  // جودة الضغط (60%)
+const MAX_IMAGE_WIDTH = 800;
+const IMAGE_QUALITY = 0.6;
 
 function addMessage(text, sender) {
     const chatArea = document.getElementById('chatArea');
@@ -19,29 +17,24 @@ function addMessage(text, sender) {
     chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-// دالة ضغط الصورة قبل الإرسال
+// ضغط الصورة
 function compressImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
-                // حساب الأبعاد الجديدة
                 let width = img.width;
                 let height = img.height;
                 if (width > MAX_IMAGE_WIDTH) {
                     height = (height * MAX_IMAGE_WIDTH) / width;
                     width = MAX_IMAGE_WIDTH;
                 }
-
-                // الرسم على canvas بحجم أصغر
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-
-                // استخراج Base64 بجودة مخفضة
                 const compressedBase64 = canvas.toDataURL('image/jpeg', IMAGE_QUALITY).split(',')[1];
                 resolve(compressedBase64);
             };
@@ -51,6 +44,7 @@ function compressImage(file) {
     });
 }
 
+// إرسال رسالة (نصية أو صورة)
 async function sendMessage() {
     const input = document.getElementById('userInput');
     const text = input.value.trim();
@@ -77,14 +71,12 @@ async function sendMessage() {
                 },
                 body: JSON.stringify({
                     content: caption,
-                    imageData: pendingImage // الصورة مضغوطة بالفعل
+                    imageData: pendingImage
                 })
             });
-
             const data = await response.json();
             const loading = document.getElementById('loadingMessage');
             if (loading) loading.remove();
-
             if (data.response) {
                 addMessage(data.response, 'bot');
             } else {
@@ -95,12 +87,10 @@ async function sendMessage() {
             if (loading) loading.remove();
             addMessage('❌ تعذر الاتصال بالخادم', 'bot');
         }
-
         pendingImage = null;
         return;
     }
 
-    // إرسال نص عادي
     if (!text) return;
     addMessage(text, 'user');
     input.value = '';
@@ -122,11 +112,9 @@ async function sendMessage() {
             },
             body: JSON.stringify({ content: text })
         });
-
         const data = await response.json();
         const loading = document.getElementById('loadingMessage');
         if (loading) loading.remove();
-
         if (data.response) {
             addMessage(data.response, 'bot');
         } else {
@@ -139,30 +127,91 @@ async function sendMessage() {
     }
 }
 
-// عند اختيار صورة
+// دالة مساعدة لإنشاء input جديد لإصلاح مشكلة الرفع المتعدد
+function createFileInput(id, accept, changeHandler) {
+    const oldInput = document.getElementById(id);
+    if (oldInput) oldInput.remove();
+
+    const newInput = document.createElement('input');
+    newInput.type = 'file';
+    newInput.id = id;
+    newInput.accept = accept;
+    newInput.style.display = 'none';
+    newInput.onchange = changeHandler;
+    document.body.appendChild(newInput);
+    return newInput;
+}
+
+// زر تحليل صورة
+function triggerImageUpload() {
+    const input = createFileInput('imageInput', 'image/*', handleImageUpload);
+    input.click();
+}
+
+// زر رفع ملف
+function triggerDocUpload() {
+    const input = createFileInput('docInput', '.pdf,.docx,.xlsx,.pptx,.txt,.csv', handleDocUpload);
+    input.click();
+}
+
+// معالج الصورة
 function handleImageUpload() {
-    const file = document.getElementById('imageInput').files[0];
+    const file = this.files[0];
     if (!file) return;
-
     addMessage(`🖼️ جاري معالجة: ${file.name}...`, 'user');
-
     compressImage(file).then((compressed) => {
         pendingImage = compressed;
-        addMessage(`✅ تم تجهيز الصورة (مضغوطة).`, 'bot');
-        addMessage('✏️ اكتب تعليقك (مثلاً: "ترجم النص في الصورة إلى الإنجليزية") ثم اضغط إرسال، أو اتركه فارغاً للتحليل العام.', 'bot');
+        addMessage('✅ تم تجهيز الصورة (مضغوطة).', 'bot');
+        addMessage('✏️ اكتب تعليقك (مثلاً: "ترجم النص في الصورة إلى الإنجليزية") ثم اضغط إرسال.', 'bot');
     }).catch(() => {
         addMessage('❌ فشل معالجة الصورة.', 'bot');
     });
-
-    document.getElementById('imageInput').value = '';
 }
 
-// باقي الدوال (sendTextPrompt, handleDocUpload, openBot) كما هي بدون تغيير
+// معالج المستندات
+function handleDocUpload() {
+    const file = this.files[0];
+    if (!file) return;
+    addMessage(`📄 جاري قراءة: ${file.name}`, 'user');
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result.substring(0, 5000);
+        const chatArea = document.getElementById('chatArea');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message bot-message';
+        loadingDiv.id = 'loadingMessage';
+        loadingDiv.innerHTML = '<div class="message-content">⏳ جاري التحليل...</div>';
+        chatArea.appendChild(loadingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+
+        fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-Id': USER_ID
+            },
+            body: JSON.stringify({ content: 'حلل هذا المستند:\n\n' + text })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const loading = document.getElementById('loadingMessage');
+            if (loading) loading.remove();
+            addMessage(data.response || 'عذراً، لم أتمكن من تحليل المستند.', 'bot');
+        })
+        .catch(() => {
+            const loading = document.getElementById('loadingMessage');
+            if (loading) loading.remove();
+            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
+        });
+    };
+    reader.readAsText(file);
+}
+
+// زر محادثة
 function sendTextPrompt() {
     const text = prompt('ما هو سؤالك؟');
     if (text) {
         addMessage(text, 'user');
-
         const chatArea = document.getElementById('chatArea');
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'message bot-message';
@@ -193,50 +242,10 @@ function sendTextPrompt() {
     }
 }
 
-function handleDocUpload() {
-    const file = document.getElementById('docInput').files[0];
-    if (!file) return;
-    addMessage(`📄 جاري قراءة: ${file.name}`, 'user');
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result.substring(0, 5000);
-
-        const chatArea = document.getElementById('chatArea');
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'message bot-message';
-        loadingDiv.id = 'loadingMessage';
-        loadingDiv.innerHTML = '<div class="message-content">⏳ جاري التحليل...</div>';
-        chatArea.appendChild(loadingDiv);
-        chatArea.scrollTop = chatArea.scrollHeight;
-
-        fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-User-Id': USER_ID
-            },
-            body: JSON.stringify({ content: 'حلل هذا المستند:\n\n' + text })
-        })
-        .then(response => response.json())
-        .then(data => {
-            const loading = document.getElementById('loadingMessage');
-            if (loading) loading.remove();
-            addMessage(data.response || 'عذراً، لم أتمكن من تحليل المستند.', 'bot');
-        })
-        .catch(() => {
-            const loading = document.getElementById('loadingMessage');
-            if (loading) loading.remove();
-            addMessage('❌ تعذر الاتصال بالخادم', 'bot');
-        });
-    };
-    reader.readAsText(file);
-    document.getElementById('docInput').value = '';
-}
-
+// فتح البوت
 function openBot() {
     addMessage('🤖 *للتحدث مع البوت:*', 'bot');
     addMessage('1. افتح تطبيق تيليجرام', 'bot');
     addMessage('2. ابحث عن: \u200E@SmartAiLegalBot', 'bot');
     addMessage('3. أرسل /start للبدء', 'bot');
-        }
+}
